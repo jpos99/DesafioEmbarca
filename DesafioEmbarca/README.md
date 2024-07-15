@@ -59,7 +59,7 @@ Este projeto demonstra a orquestração de microsserviços utilizando AWS Step F
 
 ## Uso
 
-1. **Acione downloadAndUploadToS3** enviando uma requisição POST com um payload JSON contendo a `csv_url`:
+1. **Acione downloadAndUploadToS3** enviando uma requisição POST com um payload JSON contendo a `csv_url`  Substitua <api-gateway-url> pela URL recebida no passo 5:
 
     ```sh
     curl -X POST <api-gateway-url>/download \
