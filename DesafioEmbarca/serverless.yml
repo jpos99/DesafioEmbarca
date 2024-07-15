@@ -1,0 +1,116 @@
+org: desafioembarca
+app: embarcaserverlessapp
+service: microservices-orchestration
+
+provider:
+  name: aws
+  ecr:
+    images:
+      downloadanduploadtos3image:
+        uri: 471112727209.dkr.ecr.us-east-2.amazonaws.com/downloadanduploadtos3image:latest
+      processcsvandsavetodbimage:
+        uri: 471112727209.dkr.ecr.us-east-2.amazonaws.com/processcsvandsavetodbimage:latest
+  region: us-east-2
+  timeout: 60
+  stage: dev
+  environment:
+    BUCKET_NAME: ${ssm:/microservices-orchestration/dev/bucket_name}
+    DB_HOST: ${ssm:/microservices-orchestration/dev/db_host}
+    DB_USER: ${ssm:/microservices-orchestration/dev/db_user}
+    DB_PASSWORD: ${ssm:/microservices-orchestration/dev/db_password}
+    DB_PORT: ${ssm:/microservices-orchestration/dev/db_port}
+    DB_NAME: ${ssm:/microservices-orchestration/dev/db_name}
+
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "s3:PutObject"
+        - "s3:GetObject"
+        - "s3:ListBucket"
+      Resource: "arn:aws:s3:::bucketembarca/*"
+    - Effect: "Allow"
+      Action:
+        - "s3:PutObject"
+        - "s3:GetObject"
+        - "s3:ListBucket"
+      Resource: "arn:aws:s3:::bucketembarca"
+    - Effect: "Allow"
+      Action:
+        - "states:StartExecution"
+      Resource: "arn:aws:states:us-east-2:471112727209:stateMachine:CsvProcessingStateMachineStepFunctionsStateMachine-6hPYcy21m5Wr"
+    - Effect: "Allow"
+      Action:
+        - "lambda:InvokeFunction"
+      Resource:
+        - "arn:aws:lambda:us-east-2:${aws:accountId}:function:${self:service}-${self:provider.stage}-downloadAndUploadToS3"
+        - "arn:aws:lambda:us-east-2:${aws:accountId}:function:${self:service}-${self:provider.stage}-processCsvAndSaveToDb"
+
+functions:
+  downloadAndUploadToS3:
+    image:
+      name: downloadanduploadtos3image
+    timeout: 30
+    events:
+      - http:
+          path: download
+          method: post
+
+  processCsvAndSaveToDb:
+    image:
+      name: processcsvandsavetodbimage
+    timeout: 60
+    events:
+      - s3:
+          bucket: bucketembarca
+          event: s3:ObjectCreated:*
+          existing: true
+
+
+resources:
+  Resources:
+    CsvProcessingStateMachineRole:
+      Type: "AWS::IAM::Role"
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: "Allow"
+              Principal:
+                Service: "states.amazonaws.com"
+              Action: "sts:AssumeRole"
+        Policies:
+          - PolicyName: "CsvProcessingStateMachinePolicy"
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: "Allow"
+                  Action:
+                    - "lambda:InvokeFunction"
+                  Resource:
+                    - "arn:aws:lambda:us-east-2:${aws:accountId}:function:${self:service}-${self:provider.stage}-downloadanduploadtos3image"
+                    - "arn:aws:lambda:us-east-2:${aws:accountId}:function:${self:service}-${self:provider.stage}-processcsvandsavetodbimage"
+
+plugins:
+  - serverless-step-functions
+
+stepFunctions:
+  stateMachines:
+    csvProcessingStateMachine:
+      role:
+        Fn::GetAtt:
+          - CsvProcessingStateMachineRole
+          - Arn
+      definition:
+        Comment: "CSV data collecting and processing"
+        StartAt: DownloadAndUploadToS3
+        States:
+          DownloadAndUploadToS3:
+            Type: Task
+            Resource: arn:aws:lambda:us-east-2:${aws:accountId}:function:${self:service}-${self:provider.stage}-downloadAndUploadToS3
+            ResultPath: "$.downloadResult"
+            Next: ProcessCsvAndSaveToDb
+          ProcessCsvAndSaveToDb:
+            Type: Task
+            Resource: arn:aws:lambda:us-east-2:${aws:accountId}:function:${self:service}-${self:provider.stage}-processCsvAndSaveToDb
+            InputPath: "$.downloadResult.body"
+            End: true

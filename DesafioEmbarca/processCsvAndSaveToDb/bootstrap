@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /var/lang/bin/python3.9 -m awslambdaric lambda_functions.process_csv_and_save_to_db.lambda_handler

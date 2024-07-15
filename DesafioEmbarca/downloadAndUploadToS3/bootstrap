@@ -1,0 +1,3 @@
+#!/bin/sh
+exec /var/lang/bin/python3.9 -m awslambdaric lambda_functions.download_and_upload_to_s3.lambda_handler
+
