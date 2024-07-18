@@ -78,7 +78,7 @@ Este projeto demonstra a orquestração de microsserviços utilizando AWS Step F
 - **requirements.txt**: Cada função tem seu arquivo requirements responsável por especificar as dependências de cada função.
 
 ## Considerações
-- Parti do pré-suposto que as estruturas e configurações necessárias dentro do AWS já estão prontas.
+- Parti do pré-suposto que as estruturas e configurações necessárias dentro do AWS já estão prontas, incluido um bucket com o nome de bucketembarca.
 - Os dados obtidos serão duplicados no caso de registros que envolvam mais de um veículo alvo, isso pode gerar distorções em estatísticas de número de acidentes e de mortes.
 - A coluna `created_at` do banco relacional possui o formato de string 'YYYY-MM-DD HH:MM'. Este formato foi escolhido por ter uma leitura humana mais fácil e maior flexibilidade para dados que serão armazenados e usados por diversos ambientes e plataformas.
 - Acredito que para fins de avaliação de conhecimento de programação e do ambiente AWS esse desafio cumpre seus objetivos. Para uma aplicação real acredito que a abordagem da criação do datalake com suas camadas usuais (RAW, CLEANED, ENRICHED e CURATED) seria mais apropriado.
